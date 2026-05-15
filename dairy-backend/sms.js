@@ -13,13 +13,10 @@ const sendSMS = async (phone, message) => {
     const result = await sms.send({
       to: [phone],
       message: message,
-      from: '15629',
     });
-    console.log('SMS sent:', result);
-    return result;
+console.log('SMS sent:', JSON.stringify(result, null, 2));    return result;
   } catch (err) {
     console.error('SMS error:', err.message);
-    // Don't throw — notifications still work even if SMS fails
   }
 };
 
