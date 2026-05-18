@@ -12,9 +12,10 @@ function Dashboard({ farmer, onLogout }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    fetchCows();
-    fetchNotifCount();
+    fetchCow();
+    fetchRecords();
   }, []);
 
   const fetchCows = async () => {

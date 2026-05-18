@@ -20,7 +20,11 @@ function BreedingPage({ farmer }) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  useEffect(() => { fetchCow(); fetchRecords(); }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    fetchCow();
+    fetchRecords();
+  }, []);
 
   const fetchCow = async () => {
     try { const res = await API.get(`/cows/${id}`); setCow(res.data); }
