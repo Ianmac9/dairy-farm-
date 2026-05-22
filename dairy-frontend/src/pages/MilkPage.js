@@ -17,7 +17,6 @@ function MilkPage({ farmer }) {
   const currentMonth = new Date().getMonth() + 1;
   const currentYear = new Date().getFullYear();
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetchCow();
     fetchRecords();
