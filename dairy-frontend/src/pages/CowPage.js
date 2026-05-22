@@ -12,7 +12,6 @@ function CowPage({ farmer, onLogout }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [hoveredAction, setHoveredAction] = useState(null);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetchCow();
     fetchRecords();
