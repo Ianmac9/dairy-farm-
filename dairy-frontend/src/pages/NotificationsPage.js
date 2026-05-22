@@ -9,7 +9,6 @@ function NotificationsPage({ farmer }) {
   const [error, setError] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
- // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetchCow();
     fetchRecords();
