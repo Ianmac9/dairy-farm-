@@ -13,13 +13,12 @@ const app  = express();
 const PORT = process.env.PORT || 5000;
 
 app.use(cors({
-  origin: [
-    'http://localhost:3000',
-    'https://dairy-farm-t5yb-git-main-ianmac9s-projects.vercel.app',
-    'https://dairy-farm-t5yb.vercel.app',
-  ],
+  origin: function(origin, callback) {
+    callback(null, true);
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
 }));
 app.use(express.json());
 
