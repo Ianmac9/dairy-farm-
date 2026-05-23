@@ -17,8 +17,10 @@ function MilkPage({ farmer }) {
   const currentMonth = new Date().getMonth() + 1;
   const currentYear = new Date().getFullYear();
 
- useEffect(() => {
-    fetchRecords();
+useEffect(() => {
+    fetchCow();
+    fetchLogs();
+    fetchMonthly();
   }, []);
   
   }, []);
