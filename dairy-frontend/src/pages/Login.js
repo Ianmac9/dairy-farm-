@@ -10,6 +10,11 @@ function Login({ onLogin }) {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  const handlePhoneChange = (e) => {
+    const val = e.target.value.replace(/\D/g, '');
+    setForm({ ...form, phone: '+254' + val });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -26,10 +31,7 @@ function Login({ onLogin }) {
 
   return (
     <div style={styles.container}>
-      {/* Dark overlay */}
       <div style={styles.overlay} />
-
-      {/* Login Card */}
       <div style={styles.card}>
         <div style={styles.cardHeader}>
           <span style={styles.cardIcon}>🐄</span>
@@ -44,7 +46,16 @@ function Login({ onLogin }) {
             <>
               <input style={styles.input} name="name" placeholder="👤 Full Name" onChange={handleChange} required />
               <input style={styles.input} name="farm_name" placeholder="🌿 Farm Name" onChange={handleChange} />
-              <input style={styles.input} name="phone" placeholder="📱 Phone (+254...)" onChange={handleChange} />
+              <div style={styles.phoneRow}>
+                <div style={styles.phonePrefix}>+254</div>
+                <input
+                  style={{ ...styles.input, flex: 1, marginBottom: 0 }}
+                  name="phone_local"
+                  placeholder="7XXXXXXXX or 1XXXXXXXX"
+                  maxLength={9}
+                  onChange={handlePhoneChange}
+                />
+              </div>
             </>
           )}
           <input style={styles.input} name="email" type="email" placeholder="✉️ Email Address" onChange={handleChange} required />
@@ -108,6 +119,21 @@ const styles = {
     backgroundColor: '#fffdf9',
     fontFamily: 'inherit',
     outline: 'none',
+  },
+  phoneRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    marginBottom: '12px',
+  },
+  phonePrefix: {
+    padding: '12px 14px',
+    backgroundColor: '#3d2b1f',
+    color: '#d4a855',
+    borderRadius: '8px',
+    fontWeight: 'bold',
+    fontSize: '14px',
+    whiteSpace: 'nowrap',
   },
   button: {
     width: '100%',
