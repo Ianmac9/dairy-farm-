@@ -13,10 +13,10 @@ function Dashboard({ farmer, onLogout }) {
   const navigate = useNavigate();
   
   useEffect(() => {
-    fetchCow();
-    fetchRecords();
+    fetchCows();
+    fetchNotifCount();
   }, []);
-
+  
   const fetchCows = async () => {
     try {
       const res = await API.get('/cows');
