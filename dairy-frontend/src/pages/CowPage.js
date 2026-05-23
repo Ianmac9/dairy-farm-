@@ -12,11 +12,10 @@ function CowPage({ farmer, onLogout }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [hoveredAction, setHoveredAction] = useState(null);
 
-  useEffect(() => {
+ useEffect(() => {
     fetchCow();
-    fetchRecords();
   }, []);
-
+  
   const fetchCow = async () => {
     try {
       const res = await API.get(`/cows/${id}`);
