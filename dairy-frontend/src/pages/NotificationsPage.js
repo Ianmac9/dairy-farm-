@@ -9,9 +9,8 @@ function NotificationsPage({ farmer }) {
   const [error, setError] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  useEffect(() => {
-    fetchCow();
-    fetchRecords();
+ useEffect(() => {
+    fetchNotifications();
   }, []);
 
   const fetchNotifications = async () => {
