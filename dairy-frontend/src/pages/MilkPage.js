@@ -23,7 +23,6 @@ useEffect(() => {
     fetchMonthly();
   }, []);
   
-  }, []);
   const fetchCow = async () => {
     try {
       const res = await API.get(`/cows/${id}`);
