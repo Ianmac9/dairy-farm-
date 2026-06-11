@@ -8,8 +8,10 @@ function MilkPage({ farmer }) {
   const [cow, setCow] = useState(null);
   const [logs, setLogs] = useState([]);
   const [monthly, setMonthly] = useState({ monthly_total: 0, days_recorded: 0 });
-  const [form, setForm] = useState({ morning: '', afternoon: '', evening: '' });
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [todayLog, setTodayLog] = useState({ morning: '', afternoon: '', evening: '' });
+  const [activeSession, setActiveSession] = useState(null);
+  const [sessionInput, setSessionInput] = useState('');
+  const [selectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -17,12 +19,12 @@ function MilkPage({ farmer }) {
   const currentMonth = new Date().getMonth() + 1;
   const currentYear = new Date().getFullYear();
 
-useEffect(() => {
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
     fetchCow();
     fetchLogs();
     fetchMonthly();
   }, []);
-  
   const fetchCow = async () => {
     try {
       const res = await API.get(`/cows/${id}`);
@@ -36,6 +38,14 @@ useEffect(() => {
     try {
       const res = await API.get(`/milk/cow/${id}`);
       setLogs(res.data);
+      const today = res.data.find(l => l.log_date?.split('T')[0] === selectedDate);
+      if (today) {
+        setTodayLog({
+          morning: today.morning || '',
+          afternoon: today.afternoon || '',
+          evening: today.evening || '',
+        });
+      }
     } catch (err) {
       setError('Failed to fetch milk logs');
     }
@@ -53,24 +63,26 @@ useEffect(() => {
     }
   };
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSessionSave = async () => {
+    if (!sessionInput && sessionInput !== '0') {
+      setError('Please enter the litres produced');
+      return;
+    }
     setError('');
     setSuccess('');
+    const updated = { ...todayLog, [activeSession]: sessionInput };
     try {
       await API.post('/milk', {
         cow_id: id,
         log_date: selectedDate,
-        morning: parseFloat(form.morning) || 0,
-        afternoon: parseFloat(form.afternoon) || 0,
-        evening: parseFloat(form.evening) || 0,
+        morning: parseFloat(updated.morning) || 0,
+        afternoon: parseFloat(updated.afternoon) || 0,
+        evening: parseFloat(updated.evening) || 0,
       });
-      setSuccess('Milk record saved successfully!');
-      setForm({ morning: '', afternoon: '', evening: '' });
+      setTodayLog(updated);
+      setActiveSession(null);
+      setSessionInput('');
+      setSuccess(`${activeSession.charAt(0).toUpperCase() + activeSession.slice(1)} session saved!`);
       fetchLogs();
       fetchMonthly();
     } catch (err) {
@@ -89,20 +101,21 @@ useEffect(() => {
     }
   };
 
-  const dailyTotal = (parseFloat(form.morning) || 0) + (parseFloat(form.afternoon) || 0) + (parseFloat(form.evening) || 0);
+  const todayTotal = (parseFloat(todayLog.morning) || 0) + (parseFloat(todayLog.afternoon) || 0) + (parseFloat(todayLog.evening) || 0);
   const dailyAverage = monthly.days_recorded > 0 ? (monthly.monthly_total / monthly.days_recorded).toFixed(1) : '0.0';
+
+  const sessions = [
+    { key: 'morning', label: 'Morning', time: '5:00 AM - 8:00 AM', color: '#f59e0b', bg: '#fffbeb' },
+    { key: 'afternoon', label: 'Afternoon', time: '12:00 PM - 2:00 PM', color: '#1e90ff', bg: '#eff8ff' },
+    { key: 'evening', label: 'Evening', time: '5:00 PM - 7:00 PM', color: '#7c3aed', bg: '#f5f3ff' },
+  ];
 
   if (!cow) return <div style={styles.loading}>Loading...</div>;
 
   return (
     <div style={styles.page}>
+      {sidebarOpen && <div style={styles.overlay} onClick={() => setSidebarOpen(false)} />}
 
-      {/* Sidebar Overlay */}
-      {sidebarOpen && (
-        <div style={styles.overlay} onClick={() => setSidebarOpen(false)} />
-      )}
-
-      {/* Sidebar */}
       <div style={{ ...styles.sidebar, left: sidebarOpen ? '0' : '-260px' }}>
         <div style={styles.sidebarHeader}>
           <h2 style={styles.sidebarTitle}>DairyFarm</h2>
@@ -118,21 +131,13 @@ useEffect(() => {
             { key: 'notifications', label: 'Notifications', path: '/notifications' },
             { key: 'profile', label: 'Profile', path: '/profile' },
           ].map(item => (
-            <div
-              key={item.key}
-              style={styles.navItem}
-              onClick={() => navigate(item.path)}
-            >
-              {item.label}
-            </div>
+            <div key={item.key} style={styles.navItem} onClick={() => navigate(item.path)}>{item.label}</div>
           ))}
         </nav>
         <button style={styles.logoutBtn} onClick={() => { localStorage.removeItem('token'); localStorage.removeItem('farmer'); window.location.href = '/'; }}>Logout</button>
       </div>
 
-      {/* Main */}
       <div style={styles.main}>
-        {/* Top Bar */}
         <div style={styles.topBar}>
           <button style={styles.menuBtn} onClick={() => setSidebarOpen(true)}>☰ Menu</button>
           <div style={styles.breadcrumb}>
@@ -165,46 +170,74 @@ useEffect(() => {
           </div>
         </div>
 
-        {/* Form */}
+        {/* Today's Sessions */}
         <div style={styles.card}>
-          <h2 style={styles.cardTitle}>Record Milk</h2>
+          <div style={styles.cardHeaderRow}>
+            <h2 style={styles.cardTitle}>Today's Milking</h2>
+            <span style={styles.todayDate}>{new Date().toLocaleDateString('en-KE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+          </div>
+
           {error && <div style={styles.errorBox}>{error}</div>}
           {success && <div style={styles.successBox}>{success}</div>}
 
-          <form onSubmit={handleSubmit}>
-            <div style={styles.dateRow}>
-              <label style={styles.label}>Date</label>
-              <input
-                style={styles.input}
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                max={new Date().toISOString().split('T')[0]}
-              />
-            </div>
+          <div style={styles.sessionsGrid}>
+            {sessions.map(session => {
+              const recorded = todayLog[session.key] !== '' && todayLog[session.key] !== undefined;
+              const isActive = activeSession === session.key;
+              return (
+                <div key={session.key} style={{ ...styles.sessionCard, borderTop: `4px solid ${session.color}`, backgroundColor: recorded ? session.bg : 'white' }}>
+                  <div style={styles.sessionTop}>
+                    <div>
+                      <p style={{ ...styles.sessionLabel, color: session.color }}>{session.label}</p>
+                      <p style={styles.sessionTime}>{session.time}</p>
+                    </div>
+                    {recorded && (
+                      <div style={{ ...styles.sessionValue, color: session.color }}>
+                        {parseFloat(todayLog[session.key]).toFixed(1)}L
+                      </div>
+                    )}
+                  </div>
 
-            <div style={styles.sessionsRow}>
-              <div style={styles.session}>
-                <label style={{ ...styles.label, color: '#f59e0b' }}>Morning (L)</label>
-                <input style={styles.input} name="morning" type="number" step="0.1" min="0" placeholder="0.0" value={form.morning} onChange={handleChange} />
-              </div>
-              <div style={styles.session}>
-                <label style={{ ...styles.label, color: '#1e90ff' }}>Afternoon (L)</label>
-                <input style={styles.input} name="afternoon" type="number" step="0.1" min="0" placeholder="0.0" value={form.afternoon} onChange={handleChange} />
-              </div>
-              <div style={styles.session}>
-                <label style={{ ...styles.label, color: '#7c3aed' }}>Evening (L)</label>
-                <input style={styles.input} name="evening" type="number" step="0.1" min="0" placeholder="0.0" value={form.evening} onChange={handleChange} />
-              </div>
-            </div>
+                  {isActive ? (
+                    <div style={styles.sessionInputArea}>
+                      <input
+                        style={styles.sessionInput}
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        placeholder="0.0"
+                        value={sessionInput}
+                        onChange={(e) => setSessionInput(e.target.value)}
+                        autoFocus
+                      />
+                      <div style={styles.sessionBtns}>
+                        <button style={{ ...styles.saveSessionBtn, backgroundColor: session.color }} onClick={handleSessionSave}>Save</button>
+                        <button style={styles.cancelSessionBtn} onClick={() => { setActiveSession(null); setSessionInput(''); }}>Cancel</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      style={{ ...styles.recordBtn, borderColor: session.color, color: session.color }}
+                      onClick={() => {
+                        setActiveSession(session.key);
+                        setSessionInput(todayLog[session.key] || '');
+                        setSuccess('');
+                        setError('');
+                      }}
+                    >
+                      {recorded ? 'Edit' : 'Record'}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
 
-            <div style={styles.totalRow}>
-              <span style={styles.totalLabel}>Daily Total</span>
-              <span style={styles.totalValue}>{dailyTotal.toFixed(1)} L</span>
-            </div>
-
-            <button style={styles.button} type="submit">Save Record</button>
-          </form>
+          {/* Daily Total */}
+          <div style={styles.totalRow}>
+            <span style={styles.totalLabel}>Today's Total</span>
+            <span style={styles.totalValue}>{todayTotal.toFixed(1)} L</span>
+          </div>
         </div>
 
         {/* History */}
@@ -256,33 +289,41 @@ const styles = {
   farmName: { color: '#bee3f8', margin: '0 0 4px 0', fontWeight: '600', fontSize: '14px' },
   farmerName: { color: '#63b3ed', margin: 0, fontSize: '13px' },
   nav: { flex: 1, padding: '16px 0' },
-  navItem: { padding: '12px 24px', color: '#90cdf4', cursor: 'pointer', fontSize: '14px', fontWeight: '500', transition: 'all 0.2s' },
+  navItem: { padding: '12px 24px', color: '#90cdf4', cursor: 'pointer', fontSize: '14px', fontWeight: '500' },
   logoutBtn: { margin: '0 24px 24px', padding: '10px', backgroundColor: 'rgba(231,76,60,0.15)', color: '#fc8181', border: '1px solid rgba(231,76,60,0.3)', borderRadius: '8px', cursor: 'pointer', fontSize: '14px' },
   main: { padding: '24px 32px' },
   topBar: { display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' },
-  menuBtn: { padding: '8px 16px', backgroundColor: '#1a6fc4', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '600', whiteSpace: 'nowrap' },
+  menuBtn: { padding: '8px 16px', backgroundColor: '#1a6fc4', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' },
   breadcrumb: { fontSize: '14px', fontWeight: '500' },
   breadcrumbLink: { color: '#1a6fc4', cursor: 'pointer' },
   breadcrumbSep: { color: '#a0b4c8', margin: '0 8px' },
   breadcrumbCurrent: { color: '#0f3460', fontWeight: '600' },
   pageHeader: { marginBottom: '24px' },
-  title: { color: '#0f3460', margin: '0 0 4px 0', fontSize: '28px', fontWeight: '700', letterSpacing: '-0.5px' },
+  title: { color: '#0f3460', margin: '0 0 4px 0', fontSize: '28px', fontWeight: '700' },
   subtitle: { color: '#4a7fa5', margin: 0, fontSize: '14px' },
   statsRow: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' },
   stat: { padding: '20px 24px', borderRadius: '14px', textAlign: 'center', boxShadow: '0 4px 16px rgba(0,0,0,0.1)' },
-  statNumber: { display: 'block', fontSize: '28px', fontWeight: '700', color: 'white', letterSpacing: '-1px' },
+  statNumber: { display: 'block', fontSize: '28px', fontWeight: '700', color: 'white' },
   statLabel: { display: 'block', color: 'rgba(255,255,255,0.8)', fontSize: '13px', marginTop: '4px', fontWeight: '500' },
   card: { backgroundColor: 'white', borderRadius: '16px', padding: '28px', boxShadow: '0 2px 16px rgba(15,52,96,0.08)', marginBottom: '24px', border: '1px solid #dbeafe' },
-  cardTitle: { color: '#0f3460', marginTop: 0, marginBottom: '20px', fontSize: '17px', fontWeight: '600' },
-  dateRow: { marginBottom: '16px' },
-  sessionsRow: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '16px' },
-  session: {},
-  label: { display: 'block', fontSize: '12px', color: '#4a7fa5', marginBottom: '6px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.8px' },
-  input: { width: '100%', padding: '11px 14px', borderRadius: '10px', border: '1.5px solid #bfdbfe', fontSize: '14px', boxSizing: 'border-box', backgroundColor: '#f8fbff', outline: 'none', fontFamily: 'inherit', color: '#0f3460' },
-  totalRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'linear-gradient(135deg, #dbeafe, #ede9fe)', padding: '14px 18px', borderRadius: '10px', marginBottom: '16px' },
+  cardHeaderRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' },
+  cardTitle: { color: '#0f3460', margin: 0, fontSize: '17px', fontWeight: '600' },
+  todayDate: { color: '#4a7fa5', fontSize: '13px' },
+  sessionsGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '20px' },
+  sessionCard: { borderRadius: '12px', padding: '16px', border: '1px solid #e2e8f0', transition: 'all 0.2s' },
+  sessionTop: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' },
+  sessionLabel: { margin: '0 0 4px 0', fontWeight: '700', fontSize: '15px' },
+  sessionTime: { color: '#94a3b8', fontSize: '11px', margin: 0 },
+  sessionValue: { fontSize: '22px', fontWeight: '800' },
+  sessionInputArea: { marginTop: '8px' },
+  sessionInput: { width: '100%', padding: '10px', borderRadius: '8px', border: '1.5px solid #bfdbfe', fontSize: '16px', boxSizing: 'border-box', marginBottom: '8px', outline: 'none' },
+  sessionBtns: { display: 'flex', gap: '8px' },
+  saveSessionBtn: { flex: 1, padding: '8px', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
+  cancelSessionBtn: { flex: 1, padding: '8px', backgroundColor: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
+  recordBtn: { width: '100%', padding: '8px', backgroundColor: 'white', border: '1.5px solid', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', marginTop: '4px' },
+  totalRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'linear-gradient(135deg, #dbeafe, #ede9fe)', padding: '14px 18px', borderRadius: '10px' },
   totalLabel: { fontWeight: '600', color: '#0f3460', fontSize: '15px' },
-  totalValue: { fontSize: '22px', fontWeight: '700', color: '#1a6fc4' },
-  button: { width: '100%', padding: '13px', background: 'linear-gradient(135deg, #1a6fc4, #1e90ff)', color: 'white', border: 'none', borderRadius: '10px', fontSize: '15px', cursor: 'pointer', fontWeight: '600' },
+  totalValue: { fontSize: '24px', fontWeight: '800', color: '#1a6fc4' },
   table: { width: '100%', borderCollapse: 'collapse' },
   th: { textAlign: 'left', padding: '10px 12px', borderBottom: '2px solid #dbeafe', color: '#4a7fa5', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px' },
   tr: { borderBottom: '1px solid #f0f6ff' },
